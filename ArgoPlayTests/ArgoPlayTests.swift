@@ -7,6 +7,11 @@
 //
 
 import XCTest
+import BrightFutures
+// Not importing leads to "Operator is not a
+// know binary operator".
+import Swiftz
+
 @testable import ArgoPlay
 
 class ArgoPlayTests: XCTestCase {
@@ -21,16 +26,50 @@ class ArgoPlayTests: XCTestCase {
         super.tearDown()
     }
     
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    func testPreliftedFunc() {
+        let f = future({ _ in { x in x + 1 } })
+        let fa = future(2)
+        
+        let futureApplicative = f <*> fa
+        
+        futureApplicative
+            .forced()
+        
+        XCTAssert((futureApplicative.value!) == 3)
     }
     
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        self.measureBlock {
-            // Put the code you want to measure the time of here.
-        }
+    func testDelay() {
+        Trickiness.delay(seconds: 3).forced()
+        
+        XCTAssert(true)
     }
     
+    func testApplicativesAreAsync() {
+        let expectation = self.expectationWithDescription("Waited long enough")
+        
+        let delayTimeInSeconds: UInt32 =
+            3
+        
+        let firstDelay =
+            Trickiness.delay(seconds: delayTimeInSeconds)
+        
+        let nextDelay =
+            Trickiness.delay(seconds: delayTimeInSeconds)
+        
+        let futureApplicative: Future<Int,NoError> =
+            alwaysThree
+                <^> firstDelay
+                <*> nextDelay
+        
+        futureApplicative
+            .forced()
+        
+        expectation.
+        
+        XCTAssert(didComplete, "Timed out - this should be parallel")
+    }
+    
+    func alwaysThree<A,B>(_:A) -> B -> Int {
+        return { _ in 3 }
+    }
 }
